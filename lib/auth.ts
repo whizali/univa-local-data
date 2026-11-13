@@ -40,12 +40,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return null;
           }
           
-          // Update last login
-          await sql`
-            UPDATE users
-            SET last_login = CURRENT_TIMESTAMP
-            WHERE id = ${user.id}
-          `;
+          // Note: last_login column removed for now - can be added back if needed
+          // See create-tables.sql to add: ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
           
           return {
             id: user.id.toString(),
