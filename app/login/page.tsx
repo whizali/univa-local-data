@@ -24,13 +24,20 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('Invalid username or password');
+        setError(
+          result.error === 'CredentialsSignin'
+            ? 'Invalid username or password'
+            : `Sign-in failed (${result.error})`
+        );
+      } else if (!result?.ok) {
+        setError('Sign-in failed. Please check the server logs and try again.');
       } else {
         router.push('/');
         router.refresh();
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      console.error('Sign-in request failed:', error);
+      setError('Could not reach the server. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -68,7 +75,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="user1, user2, or user3"
+                placeholder="Enter your username"
               />
             </div>
             
@@ -99,13 +106,6 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-
-        <div className="mt-4 text-xs text-gray-500 text-center space-y-1">
-          <p>Default credentials:</p>
-          <p className="font-mono">user1 / password123</p>
-          <p className="font-mono">user2 / password123</p>
-          <p className="font-mono">user3 / password123</p>
-        </div>
       </div>
     </div>
   );

@@ -1,17 +1,15 @@
--- Merit Data Collection Database Schema
+-- Merit Data Collection Database Schema (canonical)
 
--- Users table (3 team members)
 CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   username VARCHAR(50) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
+  password_hash TEXT NOT NULL,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_login TIMESTAMP
 );
 
--- Universities table
 CREATE TABLE IF NOT EXISTS universities (
   id INTEGER PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -25,22 +23,16 @@ CREATE TABLE IF NOT EXISTS universities (
   updated_by INTEGER REFERENCES users(id)
 );
 
--- Merit formulas table
-CREATE TABLE IF NOT EXISTS merit_formulas (
-  id SERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS campuses (
+  id INTEGER PRIMARY KEY,
   university_id INTEGER REFERENCES universities(id) ON DELETE CASCADE,
-  formula_name VARCHAR(255),
-  matric_weight DECIMAL(5,2),
-  intermediate_weight DECIMAL(5,2),
-  entry_test_weight DECIMAL(5,2),
-  formula_details JSONB,
-  applicable_programs TEXT[],
+  name TEXT NOT NULL,
+  city VARCHAR(100),
+  code VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_by INTEGER REFERENCES users(id)
 );
 
--- Programs table
 CREATE TABLE IF NOT EXISTS programs (
   id SERIAL PRIMARY KEY,
   university_id INTEGER REFERENCES universities(id) ON DELETE CASCADE,
@@ -54,21 +46,36 @@ CREATE TABLE IF NOT EXISTS programs (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_by INTEGER REFERENCES users(id),
-  UNIQUE(university_id, program_id)
+  UNIQUE(university_id, program_id, degree)
 );
 
--- Closing merits table (main data collection target)
+CREATE TABLE IF NOT EXISTS merit_formulas (
+  id SERIAL PRIMARY KEY,
+  university_id INTEGER REFERENCES universities(id) ON DELETE CASCADE,
+  formula_name TEXT,
+  matric_weight DECIMAL(5,2),
+  intermediate_weight DECIMAL(5,2),
+  entry_test_weight DECIMAL(5,2),
+  formula_details JSONB,
+  applicable_programs TEXT[],
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_by INTEGER REFERENCES users(id),
+  UNIQUE(university_id, formula_name)
+);
+
 CREATE TABLE IF NOT EXISTS closing_merits (
   id SERIAL PRIMARY KEY,
   university_id INTEGER REFERENCES universities(id) ON DELETE CASCADE,
   program_id INTEGER REFERENCES programs(id) ON DELETE CASCADE,
+  campus_id INTEGER,
   year INTEGER NOT NULL CHECK (year >= 2020 AND year <= 2030),
   opening_merit DECIMAL(5,2),
   final_closing_merit DECIMAL(5,2) NOT NULL CHECK (final_closing_merit >= 0 AND final_closing_merit <= 100),
   total_seats INTEGER,
   total_applicants INTEGER,
-  gender_category VARCHAR(50),
-  seat_category VARCHAR(100),
+  gender_category VARCHAR(50) NOT NULL DEFAULT 'Open',
+  seat_category VARCHAR(100) NOT NULL DEFAULT 'Open Merit',
   source_url TEXT,
   notes TEXT,
   verified BOOLEAN DEFAULT FALSE,
@@ -79,7 +86,6 @@ CREATE TABLE IF NOT EXISTS closing_merits (
   UNIQUE(university_id, program_id, year, gender_category, seat_category)
 );
 
--- Merit lists (multiple lists per year)
 CREATE TABLE IF NOT EXISTS merit_lists (
   id SERIAL PRIMARY KEY,
   closing_merit_id INTEGER REFERENCES closing_merits(id) ON DELETE CASCADE,
@@ -92,7 +98,6 @@ CREATE TABLE IF NOT EXISTS merit_lists (
   UNIQUE(closing_merit_id, list_number)
 );
 
--- Activity log for tracking changes
 CREATE TABLE IF NOT EXISTS activity_log (
   id SERIAL PRIMARY KEY,
   user_id INTEGER REFERENCES users(id),
@@ -104,16 +109,17 @@ CREATE TABLE IF NOT EXISTS activity_log (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_universities_abbreviation ON universities(abbreviation);
+CREATE INDEX IF NOT EXISTS idx_campuses_university ON campuses(university_id);
 CREATE INDEX IF NOT EXISTS idx_programs_university ON programs(university_id);
+CREATE INDEX IF NOT EXISTS idx_programs_name ON programs(full_program_name);
+CREATE INDEX IF NOT EXISTS idx_merit_formulas_university ON merit_formulas(university_id);
 CREATE INDEX IF NOT EXISTS idx_closing_merits_university ON closing_merits(university_id);
 CREATE INDEX IF NOT EXISTS idx_closing_merits_year ON closing_merits(year);
 CREATE INDEX IF NOT EXISTS idx_closing_merits_program ON closing_merits(program_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_user ON activity_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created ON activity_log(created_at DESC);
 
--- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -122,15 +128,18 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Create triggers for updated_at
+DROP TRIGGER IF EXISTS update_universities_updated_at ON universities;
 CREATE TRIGGER update_universities_updated_at BEFORE UPDATE ON universities
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_merit_formulas_updated_at ON merit_formulas;
 CREATE TRIGGER update_merit_formulas_updated_at BEFORE UPDATE ON merit_formulas
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_programs_updated_at ON programs;
 CREATE TRIGGER update_programs_updated_at BEFORE UPDATE ON programs
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_closing_merits_updated_at ON closing_merits;
 CREATE TRIGGER update_closing_merits_updated_at BEFORE UPDATE ON closing_merits
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

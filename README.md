@@ -5,11 +5,11 @@ Internal app for collecting closing merit data for Pakistan University Admission
 ## Features
 
 ✅ **3-User System** - user1, user2, user3 (team collaboration)  
-✅ **266 Universities** - Pre-loaded from refined dataset  
-✅ **2,697 Programs** - All programs organized by university  
-✅ **263 Merit Formulas** - Calculation formulas included  
+✅ **263 Universities** - Pre-loaded from refined dataset  
+✅ **5,382 Program Entries** - All degree programs organized by university  
+✅ **345 Merit Formulas** - Calculation formulas included  
 ✅ **CRUD Operations** - Add, edit, view merit entries  
-✅ **PostgreSQL Database** - Hosted on Vercel  
+✅ **PostgreSQL Database** - Neon on Vercel  
 ✅ **Deployed on Vercel** - Accessible via URL  
 ✅ **Real-time Collaboration** - All 3 members can work simultaneously  
 
@@ -20,9 +20,14 @@ Internal app for collecting closing merit data for Pakistan University Admission
 ```bash
 npm install
 cp .env.example .env.local
-# Add your database credentials
+# Add your database credentials (or run: vercel env pull .env.local)
+npm run db:setup   # rebuilds reference tables from data/refined
 npm run dev
 ```
+
+> `npm run db:setup` drops and reloads universities, campuses, programs and
+> merit formulas. It preserves the `users` table and any closing-merit data
+> is deleted, so only run it for initial setup.
 
 ### Deploy to Vercel
 
@@ -88,8 +93,9 @@ merit-data-app/
 ├── lib/
 │   ├── auth.ts               # Authentication
 │   ├── db.ts                 # Database functions
-│   ├── db-schema.sql         # Database schema
-│   └── seed-data.ts          # Data seeding script
+│   └── db-schema.sql         # Database schema
+├── scripts/
+│   └── seed.mjs              # Rebuild + seed reference data
 ├── .env.example              # Environment template
 └── DEPLOYMENT_GUIDE.md       # Deployment instructions
 ```

@@ -1,0 +1,3 @@
+-- The database schema is maintained in lib/db-schema.sql.
+-- Apply it with: npm run db:setup
+-- (This file is kept only to avoid stale, conflicting schema copies.)

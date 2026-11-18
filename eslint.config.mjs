@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Legacy one-off diagnostic scripts (not part of the app)
+    "*.js",
+    "*.cjs",
+    "scripts/generate-seed-sql.js",
   ]),
 ]);
 

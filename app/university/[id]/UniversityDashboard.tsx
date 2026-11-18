@@ -4,18 +4,37 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { University, Program, MeritFormula } from '@/lib/db';
 
+interface ClosingMeritRow {
+  id: number;
+  full_program_name: string;
+  year: number;
+  final_closing_merit: number | string;
+  opening_merit: number | string | null;
+  gender_category: string | null;
+  created_by_name: string | null;
+}
+
 interface Props {
   university: University;
   programs: Program[];
   formulas: MeritFormula[];
-  closingMerits: any[];
-  user: number;
+  closingMerits: ClosingMeritRow[];
 }
 
-export default function UniversityDashboard({ university, programs, formulas, closingMerits, user }: Props) {
+export default function UniversityDashboard({ university, programs, formulas, closingMerits }: Props) {
   const [activeTab, setActiveTab] = useState<'programs' | 'formulas' | 'merits'>('programs');
   const [selectedProgram, setSelectedProgram] = useState<Program | null>(null);
   const [showAddMerit, setShowAddMerit] = useState(false);
+  const [programFilter, setProgramFilter] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const filteredPrograms = programs.filter((program) => {
+    const query = programFilter.trim().toLowerCase();
+    if (!query) return true;
+    return [program.fullProgramName, program.department, program.faculty, program.degree, program.campusName]
+      .filter(Boolean)
+      .some((value) => value!.toLowerCase().includes(query));
+  });
 
   const [meritForm, setMeritForm] = useState({
     year: new Date().getFullYear(),
@@ -31,8 +50,12 @@ export default function UniversityDashboard({ university, programs, formulas, cl
 
   const handleAddMerit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     
-    if (!selectedProgram) return;
+    if (!selectedProgram) {
+      setFormError('Select a program first.');
+      return;
+    }
 
     try {
       const response = await fetch('/api/closing-merits', {
@@ -49,13 +72,15 @@ export default function UniversityDashboard({ university, programs, formulas, cl
       });
 
       if (response.ok) {
-        alert('Merit entry added successfully!');
+        alert('Merit entry saved successfully!');
         window.location.reload();
       } else {
-        alert('Failed to add merit entry');
+        const data = await response.json().catch(() => null);
+        setFormError(data?.error || 'Failed to save merit entry.');
       }
     } catch (error) {
-      alert('Error adding merit entry');
+      console.error('Error adding merit entry:', error);
+      setFormError('Error adding merit entry. Please try again.');
     }
   };
 
@@ -127,17 +152,34 @@ export default function UniversityDashboard({ university, programs, formulas, cl
             {/* Programs Tab */}
             {activeTab === 'programs' && (
               <div>
-                <div className="flex justify-between items-center mb-4">
+                <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
                   <h3 className="text-lg font-semibold">Programs List</h3>
-                  <button
-                    onClick={() => setShowAddMerit(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
-                  >
-                    + Add Merit Entry
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="search"
+                      value={programFilter}
+                      onChange={(e) => setProgramFilter(e.target.value)}
+                      placeholder="Filter programs..."
+                      className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <button
+                      onClick={() => {
+                        setSelectedProgram(null);
+                        setShowAddMerit(true);
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm"
+                    >
+                      + Add Merit Entry
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  {programs.map((program) => (
+                  {filteredPrograms.length === 0 && (
+                    <div className="text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      No programs matched your filter.
+                    </div>
+                  )}
+                  {filteredPrograms.map((program) => (
                     <div
                       key={program.id}
                       className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
@@ -224,7 +266,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {closingMerits.map((merit: any) => (
+                      {closingMerits.map((merit) => (
                         <tr key={merit.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-900">{merit.full_program_name}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{merit.year}</td>
@@ -244,7 +286,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
       </div>
 
       {/* Add Merit Modal */}
-      {showAddMerit && selectedProgram && (
+      {showAddMerit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
@@ -254,6 +296,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                   onClick={() => {
                     setShowAddMerit(false);
                     setSelectedProgram(null);
+                    setFormError('');
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -261,12 +304,53 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                 </button>
               </div>
 
-              <div className="mb-4 p-4 bg-blue-50 rounded">
-                <div className="font-medium">{selectedProgram.fullProgramName}</div>
-                <div className="text-sm text-gray-600">{selectedProgram.faculty}</div>
+              {!selectedProgram ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">Select the program this merit entry belongs to:</p>
+                  <select
+                    defaultValue=""
+                    onChange={(e) => {
+                      const program = programs.find((p) => p.id.toString() === e.target.value);
+                      setSelectedProgram(program || null);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="" disabled>
+                      Choose a program...
+                    </option>
+                    {programs.map((program) => (
+                      <option key={program.id} value={program.id}>
+                        {program.fullProgramName}
+                        {program.campusName ? ` — ${program.campusName}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <>
+              <div className="mb-4 p-4 bg-blue-50 rounded flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium">{selectedProgram.fullProgramName}</div>
+                  <div className="text-sm text-gray-600">
+                    {selectedProgram.faculty}
+                    {selectedProgram.campusName ? ` • ${selectedProgram.campusName}` : ''}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedProgram(null)}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 whitespace-nowrap"
+                >
+                  Change
+                </button>
               </div>
 
               <form onSubmit={handleAddMerit} className="space-y-4">
+                {formError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+                    {formError}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -412,6 +496,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                     onClick={() => {
                       setShowAddMerit(false);
                       setSelectedProgram(null);
+                      setFormError('');
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
                   >
@@ -419,6 +504,8 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                   </button>
                 </div>
               </form>
+                </>
+              )}
             </div>
           </div>
         </div>

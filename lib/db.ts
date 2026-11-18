@@ -32,7 +32,7 @@ export interface MeritFormula {
   matricWeight: number;
   intermediateWeight: number;
   entryTestWeight: number;
-  formulaDetails?: any;
+  formulaDetails?: unknown;
 }
 
 export interface ClosingMerit {
@@ -40,14 +40,14 @@ export interface ClosingMerit {
   universityId: number;
   programId: number;
   year: number;
-  openingMerit?: number;
+  openingMerit?: number | null;
   finalClosingMerit: number;
-  totalSeats?: number;
-  totalApplicants?: number;
+  totalSeats?: number | null;
+  totalApplicants?: number | null;
   genderCategory?: string;
   seatCategory?: string;
-  sourceUrl?: string;
-  notes?: string;
+  sourceUrl?: string | null;
+  notes?: string | null;
   verified: boolean;
   createdBy?: number;
   createdByName?: string;
@@ -55,12 +55,14 @@ export interface ClosingMerit {
 }
 
 // Universities
-export async function getUniversities(search?: string) {
+export async function getUniversities(search?: string, page = 1, pageSize = 10) {
+  const offset = (page - 1) * pageSize;
+
   if (search) {
     const result = await sql`
       SELECT u.*,
-        COUNT(DISTINCT p.id) as program_count,
-        COUNT(DISTINCT cm.id) as merit_entries_count
+        COUNT(DISTINCT p.id)::int AS "programCount",
+        COUNT(DISTINCT cm.id)::int AS "meritEntriesCount"
       FROM universities u
       LEFT JOIN programs p ON u.id = p.university_id
       LEFT JOIN closing_merits cm ON u.id = cm.university_id
@@ -68,29 +70,43 @@ export async function getUniversities(search?: string) {
         OR u.abbreviation ILIKE ${'%' + search + '%'}
       GROUP BY u.id
       ORDER BY u.name
+      LIMIT ${pageSize} OFFSET ${offset}
     `;
-    return result.rows as University[];
+    const count = await sql`
+      SELECT COUNT(*)::int AS total
+      FROM universities u
+      WHERE u.name ILIKE ${'%' + search + '%'}
+        OR u.abbreviation ILIKE ${'%' + search + '%'}
+    `;
+    return {
+      universities: result.rows as University[],
+      total: count.rows[0].total as number,
+    };
   }
   
   const result = await sql`
     SELECT u.*,
-      COUNT(DISTINCT p.id) as program_count,
-      COUNT(DISTINCT cm.id) as merit_entries_count
+      COUNT(DISTINCT p.id)::int AS "programCount",
+      COUNT(DISTINCT cm.id)::int AS "meritEntriesCount"
     FROM universities u
     LEFT JOIN programs p ON u.id = p.university_id
     LEFT JOIN closing_merits cm ON u.id = cm.university_id
     GROUP BY u.id
     ORDER BY u.name
-    LIMIT 100
+    LIMIT ${pageSize} OFFSET ${offset}
   `;
-  return result.rows as University[];
+  const count = await sql`SELECT COUNT(*)::int AS total FROM universities`;
+  return {
+    universities: result.rows as University[],
+    total: count.rows[0].total as number,
+  };
 }
 
 export async function getUniversityById(id: number) {
   const result = await sql`
     SELECT u.*,
-      COUNT(DISTINCT p.id) as program_count,
-      COUNT(DISTINCT cm.id) as merit_entries_count
+      COUNT(DISTINCT p.id)::int AS "programCount",
+      COUNT(DISTINCT cm.id)::int AS "meritEntriesCount"
     FROM universities u
     LEFT JOIN programs p ON u.id = p.university_id
     LEFT JOIN closing_merits cm ON u.id = cm.university_id
@@ -122,7 +138,7 @@ export async function updateUniversity(id: number, data: Partial<University>, us
 export async function getProgramsByUniversity(universityId: number) {
   const result = await sql`
     SELECT p.*,
-      COUNT(cm.id) as closing_merits_count
+      COUNT(cm.id)::int AS "closingMeritsCount"
     FROM programs p
     LEFT JOIN closing_merits cm ON p.id = cm.program_id
     WHERE p.university_id = ${universityId}
@@ -167,7 +183,15 @@ export async function deleteProgram(id: number) {
 // Merit Formulas
 export async function getMeritFormulasByUniversity(universityId: number) {
   const result = await sql`
-    SELECT * FROM merit_formulas
+    SELECT
+      id,
+      university_id AS "universityId",
+      formula_name AS "formulaName",
+      matric_weight AS "matricWeight",
+      intermediate_weight AS "intermediateWeight",
+      entry_test_weight AS "entryTestWeight",
+      formula_details AS "formulaDetails"
+    FROM merit_formulas
     WHERE university_id = ${universityId}
     ORDER BY id
   `;
@@ -219,6 +243,17 @@ export async function getClosingMeritsByProgram(programId: number) {
   return result.rows as ClosingMerit[];
 }
 
+export interface ClosingMeritSummary {
+  id: number;
+  full_program_name: string;
+  year: number;
+  final_closing_merit: number | string;
+  opening_merit: number | string | null;
+  gender_category: string | null;
+  seat_category: string | null;
+  created_by_name: string | null;
+}
+
 export async function getClosingMeritsByUniversity(universityId: number) {
   const result = await sql`
     SELECT cm.*, p.full_program_name, u.name as created_by_name
@@ -228,7 +263,7 @@ export async function getClosingMeritsByUniversity(universityId: number) {
     WHERE cm.university_id = ${universityId}
     ORDER BY cm.year DESC, p.full_program_name
   `;
-  return result.rows;
+  return result.rows as ClosingMeritSummary[];
 }
 
 export async function addClosingMerit(data: Omit<ClosingMerit, 'id'>, userId: number) {
@@ -288,12 +323,12 @@ export async function deleteClosingMerit(id: number) {
 export async function getStats() {
   const result = await sql`
     SELECT
-      (SELECT COUNT(*) FROM universities) as universities_count,
-      (SELECT COUNT(*) FROM programs) as programs_count,
-      (SELECT COUNT(*) FROM closing_merits) as merit_entries_count,
-      (SELECT COUNT(*) FROM closing_merits WHERE verified = true) as verified_entries_count,
-      (SELECT COUNT(DISTINCT year) FROM closing_merits) as years_covered,
-      (SELECT COUNT(DISTINCT university_id) FROM closing_merits) as universities_with_data
+      (SELECT COUNT(*)::int FROM universities) as universities_count,
+      (SELECT COUNT(*)::int FROM programs) as programs_count,
+      (SELECT COUNT(*)::int FROM closing_merits) as merit_entries_count,
+      (SELECT COUNT(*)::int FROM closing_merits WHERE verified = true) as verified_entries_count,
+      (SELECT COUNT(DISTINCT year)::int FROM closing_merits) as years_covered,
+      (SELECT COUNT(DISTINCT university_id)::int FROM closing_merits) as universities_with_data
   `;
   return result.rows[0];
 }
