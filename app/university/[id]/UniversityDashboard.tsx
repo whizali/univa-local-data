@@ -160,7 +160,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                       value={programFilter}
                       onChange={(e) => setProgramFilter(e.target.value)}
                       placeholder="Filter programs..."
-                      className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      className="w-64 px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-900 bg-white placeholder-gray-400"
                     />
                     <button
                       onClick={() => {
@@ -313,13 +313,13 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                       const program = programs.find((p) => p.id.toString() === e.target.value);
                       setSelectedProgram(program || null);
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                   >
-                    <option value="" disabled>
+                    <option value="" disabled className="text-gray-500">
                       Choose a program...
                     </option>
                     {programs.map((program) => (
-                      <option key={program.id} value={program.id}>
+                      <option key={program.id} value={program.id} className="text-gray-900">
                         {program.fullProgramName}
                         {program.campusName ? ` — ${program.campusName}` : ''}
                       </option>
@@ -363,7 +363,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                       max="2030"
                       value={meritForm.year}
                       onChange={(e) => setMeritForm({ ...meritForm, year: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                     />
                   </div>
                   
@@ -379,7 +379,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                       max="100"
                       value={meritForm.finalClosingMerit}
                       onChange={(e) => setMeritForm({ ...meritForm, finalClosingMerit: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                     />
                   </div>
                 </div>
@@ -396,7 +396,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                       max="100"
                       value={meritForm.openingMerit}
                       onChange={(e) => setMeritForm({ ...meritForm, openingMerit: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                     />
                   </div>
                   
@@ -409,7 +409,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                       min="0"
                       value={meritForm.totalSeats}
                       onChange={(e) => setMeritForm({ ...meritForm, totalSeats: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                     />
                   </div>
                 </div>
@@ -422,11 +422,11 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                     <select
                       value={meritForm.genderCategory}
                       onChange={(e) => setMeritForm({ ...meritForm, genderCategory: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                     >
-                      <option value="Open">Open</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
+                      <option value="Open" className="text-gray-900">Open</option>
+                      <option value="Male" className="text-gray-900">Male</option>
+                      <option value="Female" className="text-gray-900">Female</option>
                     </select>
                   </div>
                   
@@ -437,11 +437,11 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                     <select
                       value={meritForm.seatCategory}
                       onChange={(e) => setMeritForm({ ...meritForm, seatCategory: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                     >
-                      <option value="Open Merit">Open Merit</option>
-                      <option value="Self-Finance">Self-Finance</option>
-                      <option value="Reserved">Reserved</option>
+                      <option value="Open Merit" className="text-gray-900">Open Merit</option>
+                      <option value="Self-Finance" className="text-gray-900">Self-Finance</option>
+                      <option value="Reserved" className="text-gray-900">Reserved</option>
                     </select>
                   </div>
                 </div>
@@ -455,7 +455,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                     value={meritForm.sourceUrl}
                     onChange={(e) => setMeritForm({ ...meritForm, sourceUrl: e.target.value })}
                     placeholder="https://..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white placeholder-gray-400"
                   />
                 </div>
 
@@ -467,7 +467,7 @@ export default function UniversityDashboard({ university, programs, formulas, cl
                     value={meritForm.notes}
                     onChange={(e) => setMeritForm({ ...meritForm, notes: e.target.value })}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900 bg-white"
                   />
                 </div>
 
